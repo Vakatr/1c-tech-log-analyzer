@@ -24,6 +24,10 @@ Python-приложение для анализа технологических
 Синтетические данные, offline-режим с mock-адаптером. Реальные логи и клиентские
 данные в репозиторий не входят.
 
+## Скачать
+
+Готовый Windows-архив: [Releases → v0.3.0](https://github.com/Vakatr/1c-tech-log-analyzer/releases/latest).
+
 ## Инженерные акценты
 
 - **579 offline-тестов** и **90% combined coverage**; CI на Ubuntu и Windows,

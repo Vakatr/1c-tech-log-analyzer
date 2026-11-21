@@ -1,0 +1,213 @@
+name: CI
+
+on:
+  push:
+    # Every branch: feature/fix branches must fail fast, not after the merge.
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Offline tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.11", "3.13"]
+    env:
+      COVERAGE_FILE: .coverage.${{ matrix.os }}.${{ matrix.python-version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install Linux GUI dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb python3-tk
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run the offline test suite (Linux, with a virtual display)
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a python -m pytest -q -m "not db and not live" \
+            --cov --cov-branch --cov-report=xml --cov-report=html \
+            --junitxml=junit.xml
+
+      - name: Run the offline test suite (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m pytest -q -m "not db and not live" `
+            --cov --cov-branch --cov-report=xml --cov-report=html `
+            --junitxml=junit.xml
+
+      - name: Upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}-${{ matrix.python-version }}
+          path: |
+            .coverage.*
+            coverage.xml
+            htmlcov/
+            junit.xml
+          include-hidden-files: true
+          if-no-files-found: warn
+
+  integration-db:
+    name: ClickHouse integration (no LogT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8
+        env:
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: test
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 9000:9000
+          - 8123:8123
+        options: >-
+          --health-cmd "clickhouse-client --user default --password test --query 'SELECT 1'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Run ClickHouse-backed query tests
+        env:
+          CLICKHOUSE_HOST: 127.0.0.1
+          CLICKHOUSE_PORT: "9000"
+          CLICKHOUSE_DATABASE: default
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: test
+          CLICKHOUSE_TEST: "1"
+          COVERAGE_FILE: .coverage.db
+        run: |
+          python -m pytest -q -m db \
+            --cov --cov-branch --cov-report=xml --junitxml=junit-db.xml
+
+      - name: Upload integration coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-db
+          path: |
+            .coverage.db
+            coverage.xml
+            junit-db.xml
+          include-hidden-files: true
+          if-no-files-found: warn
+
+  coverage:
+    name: Combined coverage gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [test, integration-db]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Download coverage data
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage-data
+          merge-multiple: true
+
+      - name: Combine and enforce the coverage floor
+        run: |
+          coverage combine coverage-data
+          coverage report --fail-under=90
+          coverage xml -o coverage-combined.xml
+          coverage html -d htmlcov-combined
+
+      - name: Upload the combined coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-combined
+          path: |
+            coverage-combined.xml
+            htmlcov-combined/
+
+  build:
+    name: Windows executable
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build from the PyInstaller spec
+        run: python -m PyInstaller --noconfirm --clean 1C_Log_Analyzer.spec
+
+      - name: Verify lazily imported packages are bundled
+        shell: pwsh
+        run: |
+          $driver = "dist/1C_Log_Analyzer/_internal/clickhouse_driver"
+          if (-not (Test-Path $driver)) {
+            throw "clickhouse_driver is missing from the build: $driver"
+          }
+          $openpyxl = "dist/1C_Log_Analyzer/_internal/openpyxl"
+          if (-not (Test-Path $openpyxl)) {
+            throw "openpyxl is missing from the build: $openpyxl"
+          }
+
+      - name: Upload the one-folder build
+        uses: actions/upload-artifact@v4
+        with:
+          name: 1C_Log_Analyzer-windows
+          path: dist/1C_Log_Analyzer
+          if-no-files-found: error

@@ -1,0 +1,38 @@
+# Development aid only -- not required to run the application.
+#
+# Runs a local ClickHouse server so the 1C Log Analyzer can be exercised against
+# a real database. See docs/CLICKHOUSE.md for the full setup guide.
+#
+#   docker compose up -d
+#   docker compose down          # keeps data in the named volume
+#   docker compose down -v       # deletes the volume and all imported data
+#
+# The application itself needs only ports 9000 (native, used by the app) and
+# 8123 (HTTP, used by vendored LogT during imports).
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: 1c-clickhouse
+    ports:
+      - "8123:8123"   # HTTP  -- used by LogT
+      - "9000:9000"   # native -- used by the application
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "1"
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  clickhouse-data:

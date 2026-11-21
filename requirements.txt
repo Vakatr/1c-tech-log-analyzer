@@ -1,0 +1,17 @@
+# Root dependencies for 1C Log Analyzer.
+#
+# The GUI itself is pure standard library (Tkinter), but the ClickHouse
+# integration needs a driver. Pinned so behaviour is reproducible.
+clickhouse-driver==0.2.10
+
+# XLSX export (export.py) imports openpyxl lazily, so it is optional at runtime
+# but required for the XLSX button and for the PyInstaller build. et-xmlfile is
+# the streaming XML writer openpyxl depends on; pinning it keeps builds
+# reproducible.
+openpyxl==3.1.5
+et-xmlfile==2.0.0
+
+# Vendored LogT (vendor/logt) needs these at import time; they are pinned here
+# as well so a single `pip install -r requirements.txt` covers an import run.
+requests==2.32.3
+tqdm==4.67.1

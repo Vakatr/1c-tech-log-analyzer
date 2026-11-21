@@ -1,0 +1,17 @@
+01.01.2026 01:00:00.000001
+    N=CALL, Usr="user_alpha", p:processName=db_alpha, t:clientID=101, t:connectID=201, SessionID=1001, Duration=1000, Context="Открыть форму"
+
+01.01.2026 01:00:01.000002
+    N=CALL, Usr="user_alpha", p:processName=db_alpha, t:clientID=102, t:connectID=202, SessionID=1002, Duration=5000, Context="Провести документ"
+
+01.01.2026 01:00:02.000003
+    N=DBMSSQL, Usr="user_alpha", p:processName=db_beta, t:clientID=103, t:connectID=203, SessionID=1003, Duration=20000, Context="SELECT 1"
+
+01.01.2026 01:00:03.000004
+    N=EXCP, Usr="user_beta", p:processName=db_alpha, t:clientID=104, t:connectID=204, SessionID=1004, Duration=3000, Descr="Ошибка выполнения операции"
+
+01.01.2026 01:00:04.000005
+    N=EXCPCNTX, Usr="user_beta", p:processName=db_alpha, t:clientID=105, t:connectID=205, SessionID=1005, Duration=1000, Descr="Контекст ошибки"
+
+01.01.2026 01:00:05.000006
+    N=EXCP, Usr="user_beta", p:processName=db_beta, t:clientID=106, t:connectID=206, SessionID=1006, Duration=7000

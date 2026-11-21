@@ -1,0 +1,61 @@
+__pycache__/
+*.pyc
+*.log
+test_logs/
+.venv/
+venv/
+build/
+dist/
+
+# Ad-hoc editor/manual backups of tracked sources. Real backups belong in git
+# history; `*.bak[0-9]*` covers the .bak2/.bak3 variants seen in the past.
+*.bak
+*.bak[0-9]*
+
+# PyInstaller working directories. The spec itself is NOT ignored: build.bat now
+# builds from 1C_Log_Analyzer.spec, and the spec is the only place that declares
+# the lazily imported clickhouse_driver as a hidden import. Ignoring it would
+# break every build from a clean checkout.
+*.spec
+!1C_Log_Analyzer.spec
+
+# Local, machine-specific ClickHouse credentials (never commit these)
+config/clickhouse.local.json
+
+# User filter presets and their corrupt-file archives (local user data)
+config/presets.json
+config/presets.corrupt-*.json
+
+# Generated LogT configs and staging directories
+.logt_local/
+
+# Vendored wheels extracted for local development
+.deps/
+
+# Scratch space used by manual verification scripts
+.tmp/
+
+# Tool caches
+.pytest_cache/
+.odin/
+
+# Coverage output (CI uploads it as an artifact instead)
+.coverage
+.coverage.*
+coverage.xml
+coverage-*.xml
+htmlcov/
+htmlcov-*/
+
+# Vendored RDV-LogT checkout.
+#
+# It is a separate git repository and its src/config.json carries real
+# ClickHouse credentials and local paths (e.g. C:\rdv\...), so it must never be
+# committed here. Provision it separately:
+#
+#     git clone <rdv-logt-repo> vendor/logt
+#     cp vendor/logt/src/config.json.example vendor/logt/src/config.json
+#
+# The application locates it via vendor/logt (or the LOGT_ROOT variable) and
+# never reads vendor/logt/src/config.json -- it stages its own config instead.
+vendor/

@@ -1,0 +1,28 @@
+[run]
+branch = True
+source = .
+relative_files = True
+omit =
+    test_*.py
+    */test_*.py
+    gui_test_support.py
+    vendor/*
+    .deps/*
+    .venv/*
+    build/*
+    dist/*
+    docs/*
+    examples/*
+    skills/*
+
+[report]
+show_missing = True
+skip_covered = False
+; Specifying exclude_lines replaces coverage's defaults, so the common default
+; forms are repeated here.  A line starting with # is a config comment, hence
+; the [#] character class in the pragma pattern.
+exclude_lines =
+    [#]\s*(pragma|PRAGMA)[:\s]?\s*(no|NO)\s*(cover|COVER)
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    \.\.\.

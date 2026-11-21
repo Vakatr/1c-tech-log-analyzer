@@ -1,0 +1,4 @@
+# Synthetic 1C tech-log fixtures must stay in version control even though the
+# repository root ignores *.log files. This nested file re-includes them without
+# weakening the root rule for real logs.
+!*.log

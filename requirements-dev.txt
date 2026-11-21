@@ -1,0 +1,9 @@
+# Development / CI dependencies only.
+#
+# Runtime users install requirements.txt; this file adds the test runner that
+# CI needs. Install with:  python -m pip install -r requirements-dev.txt
+-r requirements.txt
+
+# Pinned to the versions verified locally (Windows, Python 3.13).
+pytest==9.1.1
+pytest-cov==7.1.0

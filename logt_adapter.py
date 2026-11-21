@@ -2155,7 +2155,7 @@ def _close_streams(process: subprocess.Popen) -> None:
 #: Maximum page size accepted by the error list.
 MAX_PAGE_SIZE = 500
 
-#: Largest offset addressable by the ``{offset:UInt64}`` SQL placeholder.
+#: Largest offset accepted by ClickHouse ``LIMIT ... OFFSET ...``.
 _UINT64_MAX = 2**64 - 1
 
 #: RE2 pattern capturing the value of the ``Descr`` field in a raw log event.
@@ -2549,9 +2549,9 @@ def query_overview(
             {where}
             GROUP BY {EVENT_NAME_COLUMN}
             ORDER BY cnt DESC
-            LIMIT {{top_n:UInt32}}
+            LIMIT {top_n}
             """,
-            {**params, "top_n": top_n},
+            {**params},
         )
 
         top_users = conn.execute(
@@ -2564,9 +2564,9 @@ def query_overview(
             {"AND" if where else "WHERE"} {USER_COLUMN} != ''
             GROUP BY {USER_COLUMN}
             ORDER BY cnt DESC
-            LIMIT {{top_n:UInt32}}
+            LIMIT {top_n}
             """,
-            {**params, **error_params, "top_n": top_n},
+            {**params, **error_params},
         )
 
         datasets = conn.execute(
@@ -2576,9 +2576,9 @@ def query_overview(
             {where}
             GROUP BY {DATASET_COLUMN}
             ORDER BY cnt DESC
-            LIMIT {{top_n:UInt32}}
+            LIMIT {top_n}
             """,
-            {**params, "top_n": top_n},
+            {**params},
         )
     finally:
         if connection is None:
@@ -2691,7 +2691,7 @@ def query_errors(
         AdapterError: On query failure, or when ``page`` is negative,
             ``page`` is not an integer, ``page_size`` falls outside
             ``1..MAX_PAGE_SIZE``, or the requested offset exceeds the
-            ``UInt64`` range used by the SQL placeholder.
+            ``UInt64`` range accepted by ClickHouse.
     """
     page = _coerce_page_argument(page, "page")
     page_size = _coerce_page_argument(page_size, "page_size")
@@ -2725,9 +2725,9 @@ def query_errors(
             FROM {table}
             {where} {joiner} {error_cond}
             ORDER BY {TIMESTAMP_COLUMN} DESC, {TIMESTAMP_US_COLUMN} DESC
-            LIMIT {{limit:UInt32}} OFFSET {{offset:UInt64}}
+            LIMIT {page_size} OFFSET {page * page_size}
             """,
-            {**params, **error_params, "limit": page_size, "offset": page * page_size},
+            {**params, **error_params},
         )
     finally:
         if connection is None:
@@ -2787,9 +2787,9 @@ def query_performance(
             FROM {table}
             {where}
             ORDER BY {DURATION_US_COLUMN} DESC
-            LIMIT {{limit:UInt32}}
+            LIMIT {limit}
             """,
-            {**params, "limit": limit},
+            {**params},
         )
     finally:
         if connection is None:
@@ -2845,9 +2845,9 @@ def query_performance_by_event(
             {where}
             GROUP BY {EVENT_NAME_COLUMN}
             ORDER BY total_us DESC
-            LIMIT {{limit:UInt32}}
+            LIMIT {limit}
             """,
-            {**params, "limit": limit},
+            {**params},
         )
     finally:
         if connection is None:
@@ -2970,9 +2970,9 @@ def query_user_events(
             FROM {table}
             {where}
             ORDER BY {TIMESTAMP_COLUMN} DESC, {TIMESTAMP_US_COLUMN} DESC
-            LIMIT {{limit:UInt32}}
+            LIMIT {limit}
             """,
-            {**params, "limit": limit},
+            {**params},
         )
     finally:
         if connection is None:

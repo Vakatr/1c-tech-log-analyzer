@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timezone
 from decimal import Decimal
 from enum import Enum
+from pathlib import Path
 from typing import Any, TextIO
 
 logger = logging.getLogger(__name__)
@@ -493,7 +494,7 @@ def export_rows(
     except OSError:  # pragma: no cover - the file was just written
         file_size = 0
     return ExportResult(
-        path=target,
+        path=str(Path(target).resolve()),
         fmt=format_value,
         row_count=pump.count,
         truncated=pump.truncated,

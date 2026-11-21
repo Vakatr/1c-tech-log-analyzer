@@ -294,9 +294,10 @@ class TestQueriesUseParameterizedPaths(unittest.TestCase):
                     page_size=page_size,
                 )
                 self.assertTrue(recorded)
-                params = recorded[0][1]
-                self.assertEqual(params["limit"], page_size)
-                self.assertEqual(params["offset"], page * page_size)
+                sql, params = recorded[0]
+                self.assertIn(f"LIMIT {page_size}", sql)
+                self.assertIn(f"OFFSET {page * page_size}", sql)
+                self.assertNotIn("limit", params)
 
     def test_query_errors_accepts_integer_like_pagination(self):
         recorded = self._capture(
@@ -307,9 +308,10 @@ class TestQueriesUseParameterizedPaths(unittest.TestCase):
             page_size="50",
         )
         self.assertTrue(recorded)
-        params = recorded[0][1]
-        self.assertEqual(params["limit"], 50)
-        self.assertEqual(params["offset"], 100)
+        sql, params = recorded[0]
+        self.assertIn("LIMIT 50", sql)
+        self.assertIn("OFFSET 100", sql)
+        self.assertNotIn("limit", params)
 
     def test_query_errors_rejects_uint64_offset_overflow(self):
         with self.assertRaises((ValueError, logt_adapter.AdapterError)):
